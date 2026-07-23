@@ -33,9 +33,9 @@ EOD REPORT - Mon, Jul 17, 2026
 ```
 ## TODO
 
-- [ ] Improve the header design and overall visual hierarchy.
-- [ ] Add **Backup to JSON** functionality for EOD reports.
-- [ ] Add **Restore from JSON** functionality for previously backed-up reports.
+- [✔] Improve the header design and overall visual hierarchy.
+- [✔] Add **Backup to JSON** functionality for EOD reports.
+- [✔] Add **Restore from JSON** functionality for previously backed-up reports.
 - [ ] Improve the mobile UI layout and responsiveness across different screen sizes.
 - [ ] *(Tentative)* Add a calendar view to browse EOD reports over time.
 - [ ] *(Tentative)* Add compatibility with automation scripts.
