@@ -1,183 +1,525 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EOD Auto</title>
+    <title>EODauto</title>
+
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
+
+    <!-- Toast Notifications -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <div class="main-wrapper">
+    <!-- Header -->
+    <header class="site-header">
+
+        <div class="header-content">
+
+            <div class="header-branding">
+                <h1>EODauto</h1>
+                <p>Track your daily training, meetings, and deployments</p>
+            </div>
+
+            <!-- Mobile Menu Button -->
+            <button
+                id="menuToggle"
+                class="menu-toggle"
+                aria-label="Toggle navigation"
+                aria-expanded="false"
+                aria-controls="headerControls">
+
+                <span></span>
+                <span></span>
+                <span></span>
+
+            </button>
+
+            <!-- Navigation -->
+            <nav
+                id="headerControls"
+                class="header-controls"
+                aria-label="Application Navigation">
+
+                <button
+                    class="forms-button"
+                    id="formsBtn"
+                    type="button">
+
+                    Open EOD Form
+
+                </button>
+
+                <button
+                    class="backup-button"
+                    id="backupBtn"
+                    type="button">
+
+                    Backup (JSON)
+
+                </button>
+
+                <button
+                    class="restore-button"
+                    id="restoreBtn"
+                    type="button">
+
+                    Restore
+
+                </button>
+
+                <input
+                    class="restore-input"
+                    id="restoreInput"
+                    type="file"
+                    accept="application/json,.json">
+
+                <button
+                    class="theme-toggle"
+                    id="themeToggle"
+                    type="button"
+                    title="Toggle Theme">
+
+                    🌙
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main -->
+    <main class="main-wrapper">
+
         <div class="container">
-            <header>
-                <div class="header-center">
-                    <h1> EODauto</h1>
-                    <p>Track your daily training, meetings, and deployments</p>
-                </div>
-                <div class="header-actions">
-                    <button class="forms-button" onclick="openForms()"> Submit EOD Form</button>
-                    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">🌙</button>
-                </div>
-            </header>
 
             <div class="main-content">
-                <!-- Input Form -->
-                <div class="card">
+
+                <!-- Activity Form -->
+                <section class="card">
+
                     <h2>Add Activity</h2>
-                    
-                    <div class="success" id="successMessage">Activity added successfully!</div>
-                    <div class="error" id="formError"></div>
+
+                    <div
+                        class="success"
+                        id="successMessage">
+
+                        Activity added successfully!
+                    </div>
+
+                    <div
+                        class="error"
+                        id="formError">
+                    </div>
 
                     <form id="entryForm">
                         <div class="form-group">
-                            <label for="date">Date *</label>
-                            <input type="date" id="date" required>
+                            <label for="date">
+                                Date *
+                            </label>
+
+                            <input
+                                type="date"
+                                id="date"
+                                required>
                         </div>
 
                         <div class="form-group">
-                            <label for="startTime">Start Time *</label>
-                            <input type="time" id="startTime" required>
+
+                            <label for="startTime">
+                                Start Time *
+                            </label>
+
+                            <input
+                                type="time"
+                                id="startTime"
+                                required>
+
                         </div>
 
                         <div class="form-group">
-                            <label for="endTime">End Time *</label>
-                            <input type="time" id="endTime" required>
+                            <label for="endTime">
+                                End Time *
+                            </label>
+
+                            <input
+                                type="time"
+                                id="endTime"
+                                required>
                         </div>
 
                         <div class="form-group">
-                            <label for="activityType">Activity Type *</label>
-                            <select id="activityType" required>
+                            <label for="activityType">
+                                Activity Type *
+                            </label>
+
+                            <select
+                                id="activityType"
+                                required>
+
                                 <option value="">Select Type</option>
                                 <option value="training">Training</option>
                                 <option value="meeting">Meeting</option>
                                 <option value="deployment">Deployment</option>
+
                             </select>
+
                         </div>
 
                         <div class="form-group">
-                            <label for="description">Description *</label>
-                            <textarea id="description" placeholder="What did you do?" required></textarea>
+
+                            <label for="description">
+                                Description *
+                            </label>
+
+                            <textarea
+                                id="description"
+                                placeholder="What did you do?"
+                                required></textarea>
                         </div>
 
-                        <button type="submit">Add Activity</button>
+                        <button type="submit">
+                            Add Activity
+                        </button>
                     </form>
-                </div>
+                </section>
 
-                <!-- Activities View -->
-                <div class="card">
+                <!-- Reports -->
+                <section class="card">
+
                     <h2>EOD Reports</h2>
-                    
-                    <div class="tabs">
-                        <button class="tab-button active" onclick="switchTab('today')">Today</button>
-                        <button class="tab-button" onclick="switchTab('history')">History</button>
+                    <div
+                        class="tabs"
+                        id="reportTabs">
+
+                        <button
+                            class="tab-button active"
+                            data-tab="today">
+                            Today
+                        </button>
+
+                        <button
+                            class="tab-button"
+                            data-tab="history">
+                            History
+                        </button>
                     </div>
 
-                    <!-- Today's Tab -->
-                    <div class="tab-content active" id="todayTab">
-                        <div class="stats" id="stats">
+                    <!-- Today -->
+
+                    <div
+                        class="tab-content active"
+                        id="todayTab">
+                        <div
+                            class="stats"
+                            id="stats">
                             <div class="stat">
-                                <div class="stat-number" id="trainingCount">0</div>
-                                <div class="stat-label">Training</div>
+                                <div
+                                    class="stat-number"
+                                    id="trainingCount">
+                                    0
+                                </div>
+                                <div class="stat-label">
+                                    Training
+                                </div>
                             </div>
                             <div class="stat">
-                                <div class="stat-number" id="meetingCount">0</div>
-                                <div class="stat-label">Meetings</div>
+                                <div
+                                    class="stat-number"
+                                    id="meetingCount">
+                                    0
+                                </div>
+                                <div class="stat-label">
+                                    Meetings
+                                </div>
                             </div>
+
                             <div class="stat">
-                                <div class="stat-number" id="deploymentCount">0</div>
-                                <div class="stat-label">Deployments</div>
+
+                                <div
+                                    class="stat-number"
+                                    id="deploymentCount">
+                                    0
+                                </div>
+
+                                <div class="stat-label">
+                                    Deployments
+                                </div>
                             </div>
                         </div>
 
-                        <div class="entries-list" id="entriesList">
-                            <p style="color: var(--text-secondary); text-align: center; padding: 20px;">No activities yet. Add your first activity!</p>
+                        <div
+                            class="entries-list"
+                            id="entriesList">
+
+                            <p class="empty-message">
+                                No activities yet. Add your first activity!
+                            </p>
                         </div>
 
                         <div class="export-section">
+
                             <div class="export-buttons">
-                                <button onclick="exportToText()"> Export Text</button>
-                                <button onclick="copyToClipboard()"> Copy Report</button>
+
+                                <button id="exportTextBtn">
+
+                                    Export Text
+
+                                </button>
+
+                                <button id="copyReportBtn">
+
+                                    Copy Report
+
+                                </button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- History Tab -->
-                    <div class="tab-content" id="historyTab">
-                        <div class="date-list" id="dateList">
-                            <p style="color: var(--text-secondary); text-align: center; padding: 20px;">No EOD reports recorded yet.</p>
+                    <!-- History -->
+
+                    <div
+                        class="tab-content"
+                        id="historyTab">
+
+                        <div
+                            class="date-list"
+                            id="dateList">
+
+                            <p class="empty-message">
+
+                                No EOD reports recorded yet.
+
+                            </p>
                         </div>
 
-                        <div class="report-display empty" id="reportDisplay">
+                        <div
+                            class="report-display empty"
+                            id="reportDisplay">
+
                             Select a date to view the EOD report
+
                         </div>
 
                         <div class="export-section">
+
                             <div class="export-buttons">
-                                <button onclick="exportSelectedReport()"> Export Report</button>
-                                <button onclick="copySelectedReport()"> Copy Report</button>
+
+                                <button id="exportHistoryBtn">
+
+                                    Export Report
+
+                                </button>
+
+                                <button id="copyHistoryBtn">
+
+                                    Copy Report
+
+                                </button>
                             </div>
                         </div>
                     </div>
-                </div>
+                </section>
             </div>
         </div>
-    </div>
+    </main>
 
     <!-- Edit Modal -->
-    <div class="modal" id="editModal">
+
+    <div
+        class="modal"
+        id="editModal">
+
         <div class="modal-content">
+
             <div class="modal-header">
+
                 <h2>Edit Activity</h2>
-                <button class="close-modal" onclick="closeEditModal()">&times;</button>
+
             </div>
-            
+
             <form id="editForm">
+
                 <div class="form-group">
-                    <label for="editDate">Date *</label>
-                    <input type="date" id="editDate" required>
+
+                    <label for="editDate">
+                        Date *
+                    </label>
+
+                    <input
+                        type="date"
+                        id="editDate"
+                        required>
+
                 </div>
 
                 <div class="form-group">
-                    <label for="editStartTime">Start Time *</label>
-                    <input type="time" id="editStartTime" required>
+
+                    <label for="editStartTime">
+                        Start Time *
+                    </label>
+
+                    <input
+                        type="time"
+                        id="editStartTime"
+                        required>
+
                 </div>
 
                 <div class="form-group">
-                    <label for="editEndTime">End Time *</label>
-                    <input type="time" id="editEndTime" required>
+
+                    <label for="editEndTime">
+                        End Time *
+                    </label>
+
+                    <input
+                        type="time"
+                        id="editEndTime"
+                        required>
+
                 </div>
 
                 <div class="form-group">
-                    <label for="editActivityType">Activity Type *</label>
-                    <select id="editActivityType" required>
+
+                    <label for="editActivityType">
+                        Activity Type *
+                    </label>
+
+                    <select
+                        id="editActivityType"
+                        required>
+
                         <option value="">Select Type</option>
                         <option value="training">Training</option>
                         <option value="meeting">Meeting</option>
                         <option value="deployment">Deployment</option>
+
                     </select>
+
                 </div>
 
                 <div class="form-group">
-                    <label for="editDescription">Description *</label>
-                    <textarea id="editDescription" placeholder="What did you do?" required></textarea>
+
+                    <label for="editDescription">
+
+                        Description *
+
+                    </label>
+
+                    <textarea
+                        id="editDescription"
+                        required></textarea>
+
                 </div>
 
-                <div class="error" id="editError"></div>
+                <div
+                    class="error"
+                    id="editError">
+
+                </div>
 
                 <div class="modal-buttons">
-                    <button type="submit">Save Changes</button>
-                    <button type="button" onclick="closeEditModal()">Cancel</button>
+
+                    <button type="submit">
+
+                        Save Changes
+
+                    </button>
+
+                    <button
+                        type="button"
+                        id="cancelEditBtn">
+
+                        Cancel
+
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 
+    <!-- Backup Modal -->
+<div
+    id="backupModal"
+    class="modal">
+
+    <div class="modal-content backup-modal">
+
+        <div class="modal-header">
+
+            <h2>Backup Activities</h2>
+
+            <p class="modal-subtitle">
+                Select which dates you want to include in the backup.
+            </p>
+
+        </div>
+
+        <div class="backup-controls">
+
+            <label class="checkbox-row">
+
+                <input
+                    type="checkbox"
+                    id="backupSelectAll"
+                    checked>
+
+                <span>Select All</span>
+            </label>
+        </div>
+
+        <div
+            id="backupDateList"
+            class="backup-date-list">
+
+            <!-- Populated by JavaScript -->
+
+        </div>
+
+        <div
+            id="backupSummary"
+            class="backup-summary">
+
+            Selected:
+            <strong>0 dates</strong>
+            •
+            <strong>0 activities</strong>
+
+        </div>
+
+        <div class="modal-actions">
+
+            <button
+                type="button"
+                id="cancelBackupBtn"
+                class="btn-secondary">
+
+                Cancel
+
+            </button>
+
+            <button
+                type="button"
+                id="confirmBackupBtn"
+                class="btn-primary">
+
+                Download Backup
+
+            </button>
+        </div>
+    </div>
+</div>
+
     <footer>
-        <p>Made with <span class="love-heart">❤️</span> by Meya</p>
+        <p>
+            Made with
+            <span class="love-heart">❤️</span>
+            by Meya
+        </p>
     </footer>
 
     <script src="script.js"></script>
+
 </body>
 </html>

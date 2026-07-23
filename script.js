@@ -1,11 +1,6 @@
 const STORAGE_KEY = 'eodActivities';
 const THEME_KEY = 'eodTheme';
-const today = new Intl.DateTimeFormat('en-PH', {
-    timeZone: 'Asia/Manila',
-    dateStyle: 'full',
-    timeStyle: 'long'
-}).format(new Date());
-let todayArr = today.split(' ');
+const today = getTodayDateValue();
 let selectedHistoryDate = null;
 let editingActivityId = null;
 let editingActivityDate = null;
@@ -30,25 +25,135 @@ document.getElementById('editForm').addEventListener('submit', function(e) {
     saveEditedActivity();
 });
 
+document.getElementById('formsBtn').addEventListener('click', openForms);
+document.getElementById('backupBtn').addEventListener('click', openBackupModal);
+document.getElementById('restoreBtn').addEventListener('click', function() {
+    document.getElementById('restoreInput').click();
+});
+document.getElementById('restoreInput').addEventListener('change', restoreActivitiesFromJson);
+document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+document.getElementById('exportTextBtn')
+    ?.addEventListener('click', exportToText);
+
+document.getElementById('copyReportBtn')
+    ?.addEventListener('click', copyToClipboard);
+
+document.getElementById('exportHistoryBtn')
+    ?.addEventListener('click', exportSelectedReport);
+
+document.getElementById('copyHistoryBtn')
+    ?.addEventListener('click', copySelectedReport);
+
+document.getElementById('cancelEditBtn')
+    ?.addEventListener('click', closeEditModal);
+
+document.getElementById('cancelBackupBtn')
+    ?.addEventListener('click', closeBackupModal);
+
+document.getElementById('confirmBackupBtn')
+    ?.addEventListener('click', downloadSelectedBackup);
+
+document.getElementById('backupSelectAll')
+    ?.addEventListener('change', toggleSelectAllBackups);
+
+// COMPATIBILITY - MOBILE MENU
+
+const menuToggle = document.getElementById('menuToggle');
+const headerControls = document.getElementById('headerControls');
+
+if (menuToggle && headerControls) {
+
+    menuToggle.addEventListener('click', function (e) {
+
+        e.stopPropagation();
+
+        menuToggle.classList.toggle('active');
+        headerControls.classList.toggle('show');
+
+        menuToggle.setAttribute(
+            'aria-expanded',
+            headerControls.classList.contains('show')
+        );
+    });
+
+    document.addEventListener('click', function (e) {
+
+        if (
+            !headerControls.contains(e.target) &&
+            !menuToggle.contains(e.target)
+        ) {
+
+            menuToggle.classList.remove('active');
+            headerControls.classList.remove('show');
+
+            menuToggle.setAttribute('aria-expanded', 'false');
+        }
+    });
+
+    document.addEventListener('keydown', function (e) {
+
+        if (e.key === 'Escape') {
+
+            menuToggle.classList.remove('active');
+            headerControls.classList.remove('show');
+
+            menuToggle.setAttribute('aria-expanded', 'false');
+        }
+    });
+
+    headerControls.querySelectorAll('button').forEach(function (button) {
+
+        button.addEventListener('click', function () {
+
+            if (window.innerWidth <= 640) {
+
+                menuToggle.classList.remove('active');
+                headerControls.classList.remove('show');
+
+                menuToggle.setAttribute('aria-expanded', 'false');
+
+            }
+        });
+    });
+}
+
+function getTodayDateValue() {
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Manila',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).formatToParts(new Date());
+    const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+
+    return `${values.year}-${values.month}-${values.day}`;
+}
+
+function getCurrentTimeValue() {
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Manila',
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23',
+        hour12: false
+    }).formatToParts(new Date());
+    const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+
+    return `${values.hour}:${values.minute}`;
+}
+
 function initializeTime(){
-    // Set today's date as default
-    document.getElementById('date').valueAsDate = new Date();
+    const dateInput = document.getElementById('date');
+    dateInput.value = getTodayDateValue();
 
-    // Set current start time to today's time
-    let currTimeH = todayArr[5].split(":")[0]
-    let currTimeM = todayArr[5].split(":")[1]
-    currTimeH = (todayArr[6] == "AM") ? currTimeH : parseInt(currTimeH) + 12
-
-    // IF!!! there alr isnt an existing one
-    const date = document.getElementById('date').value;
-    const activities = getActivities(date);
-    if (activities.length > 0){
-        // gets last time (-1)
-        currTimeH = activities.at(-1).endTime.split(":")[0]
-        currTimeM = activities.at(-1).endTime.split(":")[1]
+    let startTime = getCurrentTimeValue();
+    const activities = getActivities(dateInput.value);
+    if (activities.length > 0) {
+        const sortedActivities = activities.slice().sort((a, b) => a.startTime.localeCompare(b.startTime));
+        startTime = sortedActivities.at(-1).endTime;
     }
 
-    document.getElementById('startTime').value = `${currTimeH}:${currTimeM}`;
+    document.getElementById('startTime').value = startTime;
 }
 
 // Toast Notification System
@@ -66,10 +171,14 @@ function showToast(message, type = 'info', duration = 3000) {
     toast.innerHTML = `
         <span class="toast-icon">${icons[type]}</span>
         <span class="toast-message">${message}</span>
-        <button class="toast-close" onclick="removeToast(this.parentElement)">×</button>
+        <button class="toast-close">×</button>
     `;
     
     container.appendChild(toast);
+
+    toast.querySelector('.toast-close').addEventListener('click', function () {
+    removeToast(toast);
+    });
     
     if (duration > 0) {
         setTimeout(() => {
@@ -89,8 +198,8 @@ function initializeTheme() {
     const savedTheme = localStorage.getItem(THEME_KEY) || 'dark';
     if (savedTheme === 'light') {
         document.body.classList.add('light-mode');
-        updateThemeButton();
     }
+    updateThemeButton();
 }
 
 function toggleTheme() {
@@ -100,22 +209,304 @@ function toggleTheme() {
     updateThemeButton();
 }
 
-function updateThemeButton() {
-    const btn = document.querySelector('.theme-toggle');
-    const isLight = document.body.classList.contains('light-mode');
-    btn.textContent = isLight ? '☀️' : '🌙';
-}
-
 function openForms() {
     window.open('https://forms.cloud.microsoft/pages/responsepage.aspx?id=VC0K9rQDFEWyn1uxr3fPC2pICO7P_hdMkKpJ5I4OTyFUNzVSOUZNSDVNNU5UUUVXSjMwOTE3OVdNNy4u&origin=lprLink&route=shorturl', '_blank');
 }
 
-function switchTab(tab) {
+function getAllActivities() {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+}
+
+function backupAllActivities() {
+    const activities = getAllActivities();
+    const backup = {
+        app: 'EODauto',
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        activities
+    };
+    const json = JSON.stringify(backup, null, 2);
+    const element = document.createElement('a');
+    const dateStamp = new Date().toISOString().slice(0, 10);
+
+    element.setAttribute('href', 'data:application/json;charset=utf-8,' + encodeURIComponent(json));
+    element.setAttribute('download', `EODauto_Backup_${dateStamp}.json`);
+    element.style.display = 'none';
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+    showToast('JSON backup downloaded', 'success');
+}
+
+/* ==========================================================
+   BACKUP MODAL
+========================================================== */
+
+function openBackupModal() {
+
+    const list = document.getElementById('backupDateList');
+
+    const allActivities = getAllActivities();
+
+    const dates = Object.keys(allActivities)
+        .sort()
+        .reverse();
+
+    list.innerHTML = '';
+
+    if (dates.length === 0) {
+
+        list.innerHTML = `
+            <p style="text-align:center;color:var(--text-secondary);padding:24px;">
+                No activities available to back up.
+            </p>
+        `;
+
+    } else {
+
+        dates.forEach(date => {
+
+            const activities = allActivities[date];
+
+            const row = document.createElement('label');
+
+            row.className = 'backup-date';
+
+            row.innerHTML = `
+                <div class="backup-left">
+
+                    <input
+                        type="checkbox"
+                        class="backup-checkbox"
+                        value="${date}"
+                        checked>
+
+                    <div class="backup-info">
+
+                        <div class="backup-date-title">
+                            ${formatDateDisplay(date)}
+                        </div>
+
+                        <div class="backup-date-subtitle">
+                            ${activities.length} ${activities.length === 1 ? 'Activity' : 'Activities'}
+                        </div>
+
+                    </div>
+
+                </div>
+            `;
+
+            list.appendChild(row);
+
+        });
+
+    }
+
+    document
+        .querySelectorAll('.backup-checkbox')
+        .forEach(cb => {
+
+            cb.addEventListener('change', updateBackupSummary);
+
+        });
+
+    document.getElementById('backupSelectAll').checked = true;
+
+    updateBackupSummary();
+
+    document.getElementById('backupModal').classList.add('show');
+
+}
+
+function closeBackupModal() {
+
+    document
+        .getElementById('backupModal')
+        .classList.remove('show');
+
+}
+
+function toggleSelectAllBackups(event) {
+
+    const checked = event.target.checked;
+
+    document
+        .querySelectorAll('.backup-checkbox')
+        .forEach(cb => {
+
+            cb.checked = checked;
+
+        });
+
+    updateBackupSummary();
+
+}
+
+function updateBackupSummary() {
+
+    const checked = document.querySelectorAll('.backup-checkbox:checked');
+
+    const allActivities = getAllActivities();
+
+    let totalActivities = 0;
+
+    checked.forEach(cb => {
+
+        totalActivities += allActivities[cb.value].length;
+
+    });
+
+    document.getElementById('backupSummary').innerHTML = `
+        Selected:
+        <strong>${checked.length} ${checked.length === 1 ? 'date' : 'dates'}</strong>
+        •
+        <strong>${totalActivities} ${totalActivities === 1 ? 'activity' : 'activities'}</strong>
+    `;
+
+    document.getElementById('confirmBackupBtn').disabled = checked.length === 0;
+
+}
+
+function downloadSelectedBackup() {
+
+    const checked = document.querySelectorAll('.backup-checkbox:checked');
+
+    if (!checked.length) {
+
+        showToast('Please select at least one date.', 'error');
+
+        return;
+
+    }
+
+    const allActivities = getAllActivities();
+
+    const selectedActivities = {};
+
+    checked.forEach(cb => {
+
+        selectedActivities[cb.value] = allActivities[cb.value];
+
+    });
+
+    const backup = {
+
+        app: 'EODauto',
+
+        version: 1,
+
+        exportedAt: new Date().toISOString(),
+
+        activities: selectedActivities
+
+    };
+
+    const json = JSON.stringify(backup, null, 2);
+
+    const dates = Object.keys(selectedActivities).sort();
+
+    let filename;
+
+    if (dates.length === 1) {
+
+        filename = `EODauto_Backup_${dates[0]}.json`;
+
+    } else {
+
+        filename = `EODauto_Backup_${dates[0]}_to_${dates[dates.length-1]}.json`;
+
+    }
+
+    const element = document.createElement('a');
+
+    element.href =
+        'data:application/json;charset=utf-8,' +
+        encodeURIComponent(json);
+
+    element.download = filename;
+
+    document.body.appendChild(element);
+
+    element.click();
+
+    document.body.removeChild(element);
+
+    closeBackupModal();
+
+    showToast('Backup downloaded successfully!', 'success');
+
+}
+
+function restoreActivitiesFromJson(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(loadEvent) {
+        try {
+            const parsed = JSON.parse(loadEvent.target.result);
+            const importedActivities = parsed.activities || parsed;
+
+            if (!isValidActivityStore(importedActivities)) {
+                showToast('Invalid EOD backup file', 'error');
+                return;
+            }
+
+            mergeActivities(importedActivities);
+            loadActivities();
+            loadHistoryDates();
+            if (selectedHistoryDate) {
+                displayHistoryReport(selectedHistoryDate);
+            }
+            showToast('Backup restored into history', 'success');
+        } catch (error) {
+            showToast('Could not read JSON backup', 'error');
+        } finally {
+            event.target.value = '';
+        }
+    };
+    reader.readAsText(file);
+}
+
+function isValidActivityStore(activitiesByDate) {
+    if (!activitiesByDate || Array.isArray(activitiesByDate) || typeof activitiesByDate !== 'object') {
+        return false;
+    }
+
+    return Object.entries(activitiesByDate).every(([date, activities]) => {
+        return /^\d{4}-\d{2}-\d{2}$/.test(date) && Array.isArray(activities) && activities.every(activity => {
+            return activity
+                && typeof activity.id !== 'undefined'
+                && activity.date === date
+                && typeof activity.startTime === 'string'
+                && typeof activity.endTime === 'string'
+                && ['training', 'meeting', 'deployment'].includes(activity.type)
+                && typeof activity.description === 'string';
+        });
+    });
+}
+
+function mergeActivities(importedActivities) {
+    const allActivities = getAllActivities();
+
+    Object.entries(importedActivities).forEach(([date, activities]) => {
+        const existingActivities = allActivities[date] || [];
+        const existingIds = new Set(existingActivities.map(activity => String(activity.id)));
+        const newActivities = activities.filter(activity => !existingIds.has(String(activity.id)));
+
+        allActivities[date] = existingActivities.concat(newActivities)
+            .sort((a, b) => a.startTime.localeCompare(b.startTime));
+    });
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(allActivities));
+}
+
+function switchTab(tab, button) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
 
     document.getElementById(tab + 'Tab').classList.add('active');
-    event.target.classList.add('active');
+    button.classList.add('active');
 
     if (tab === 'history') {
         loadHistoryDates();
@@ -467,9 +858,65 @@ function copySelectedReport() {
 document.getElementById('date').addEventListener('change', loadActivities);
 
 // Close modal when clicking outside
-window.onclick = function(event) {
-    const modal = document.getElementById('editModal');
-    if (event.target == modal) {
+window.addEventListener('click', function(event){
+
+    if(event.target === document.getElementById('editModal')){
+
         closeEditModal();
+
     }
+
+    if(event.target === document.getElementById('backupModal')){
+
+        closeBackupModal();
+
+    }
+
+});
+
+function updateHeaderDate() {
+    const headerDate = document.getElementById('headerDate');
+    if (!headerDate) return;
+
+    headerDate.textContent = new Date().toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+    });
 }
+
+updateHeaderDate();
+
+function updateThemeButton() {
+    const btn = document.querySelector('.theme-toggle');
+    const isLight = document.body.classList.contains('light-mode');
+    btn.innerHTML = isLight ? '&#x2600;&#xFE0F;' : '&#x1F319;';
+}
+
+document.querySelectorAll('.tab-button').forEach(function(button) {
+
+    button.addEventListener('click', function() {
+
+        switchTab(button.dataset.tab, button);
+
+    });
+
+});
+
+document.addEventListener('keydown', function (event) {
+
+    if (event.key !== 'Escape') return;
+
+    closeEditModal();
+    closeBackupModal();
+
+    if (menuToggle && headerControls) {
+
+        menuToggle.classList.remove('active');
+        headerControls.classList.remove('show');
+        menuToggle.setAttribute('aria-expanded', 'false');
+
+    }
+
+});
