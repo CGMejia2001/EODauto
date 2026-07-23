@@ -31,3 +31,19 @@ EOD REPORT - Mon, Jul 17, 2026
 10:30 AM - 11:30 AM | Meeting: Team standup
 9:30 AM - 10:30 AM | Deployment: Project deployment
 ```
+## TODO
+
+- [ ] Improve the header design and overall visual hierarchy.
+- [ ] Add **Backup to JSON** functionality for EOD reports.
+- [ ] Add **Restore from JSON** functionality for previously backed-up reports.
+- [ ] Improve the mobile UI layout and responsiveness across different screen sizes.
+- [ ] *(Tentative)* Add a calendar view to browse EOD reports over time.
+- [ ] *(Tentative)* Add compatibility with automation scripts.
+
+## Future Roadmap
+
+- Migrate from browser local storage to a database for improved data persistence and reliability.
+- Add filtering and search for historical reports.
+- Generate productivity dashboards and/or analytics.
+- Support recurring activities and reusable templates.
+- Continue enhancing the application with new features and UI/UX improvements.
