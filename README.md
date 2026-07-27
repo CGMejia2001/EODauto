@@ -30,7 +30,53 @@ EOD REPORT - Mon, Jul 17, 2026
 8:30 AM - 9:30 AM | Training: Bootcamp module lesson
 10:30 AM - 11:30 AM | Meeting: Team standup
 9:30 AM - 10:30 AM | Deployment: Project deployment
-```
+
+## Automation
+
+The EOD automation automatically fills supported fields in the Microsoft Forms EOD report using a Tampermonkey userscript.
+
+> **Acknowledgement:** This automation was inspired by the work of **Vic** and their EODAuto fork: https://github.com/victorjosefcaro/EODauto
+
+> **Note:** File uploads (e.g., Pluralsight screenshots) cannot be automated and must be uploaded manually before submitting the form.
+
+### 1. Install Tampermonkey
+
+1. Visit https://www.tampermonkey.net/.
+2. Install the extension for your browser (Chrome, Edge, or Firefox).
+3. Restart your browser if prompted.
+
+### 2. Install the Automation Script
+
+1. Open the **Tampermonkey Dashboard**.
+2. Select **Create a new script** (or **Install from File...** if using the provided `.user.js` file).
+3. Replace the default template with the contents of `tampermonkey.js`.
+4. Save the script (**Ctrl + S**).
+5. Ensure the script is **Enabled**.
+
+### 3. Configure the Tracker
+
+Open **Settings** in the EOD Task Tracker and complete the required automation settings:
+
+- Employee ID
+- Attendance Status
+- Default Ratings
+- Default Answers
+
+### 4. Submit Your EOD
+
+1. Complete your activities in the tracker.
+2. Click **Submit Today's EOD**.
+3. Microsoft Forms will open and automatically populate supported fields.
+4. Upload the required screenshot manually.
+5. Review the generated responses and click **Submit**.
+
+### Troubleshooting
+
+- Ensure **Tampermonkey** is installed and enabled.
+- Verify the **Tampermonkey.js** userscript is enabled.
+- Refresh Microsoft Forms if the automation does not start.
+- Update the userscript if a newer version is available.
+
 ## TODO
 
 [✔] Improve the header design and overall visual hierarchy. \
@@ -38,7 +84,7 @@ EOD REPORT - Mon, Jul 17, 2026
 [✔] Add **Restore from JSON** functionality for previously backed-up reports. 
 - [ ] Improve the mobile UI layout and responsiveness across different screen sizes.
 - [ ] *(Tentative)* Add a calendar view to browse EOD reports over time.
-- [ ] *(Tentative)* Add compatibility with automation scripts.
+[✔] Add compatibility with automation scripts.
 
 ## Future Roadmap
 
