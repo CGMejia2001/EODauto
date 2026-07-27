@@ -1,6 +1,8 @@
 const STORAGE_KEY = 'eodActivities';
 const THEME_KEY = 'eodTheme';
 const today = getTodayDateValue();
+const SETTINGS_KEY = 'eodSettings';
+let tampermonkeyDetected = false;
 let selectedHistoryDate = null;
 let editingActivityId = null;
 let editingActivityDate = null;
@@ -14,22 +16,39 @@ initializeTime();
 loadActivities();
 loadHistoryDates();
 
+
 // Form submission
 document.getElementById('entryForm').addEventListener('submit', function(e) {
     e.preventDefault();
     addActivity();
+    updateAutomationStatus();
 });
 
 document.getElementById('editForm').addEventListener('submit', function(e) {
     e.preventDefault();
     saveEditedActivity();
+    updateAutomationStatus();
 });
 
 document.getElementById('formsBtn').addEventListener('click', openForms);
 document.getElementById('backupBtn').addEventListener('click', openBackupModal);
 document.getElementById('restoreBtn').addEventListener('click', function() {
     document.getElementById('restoreInput').click();
+
 });
+
+document.getElementById('settingsBtn').addEventListener('click', openSettingsModal);
+
+document.getElementById('cancelSettingsBtn').addEventListener('click', closeSettingsModal);
+
+document.getElementById('settingsForm').addEventListener('submit', function (e) {
+
+    e.preventDefault();
+
+    saveSettingsFromForm();
+
+});
+
 document.getElementById('restoreInput').addEventListener('change', restoreActivitiesFromJson);
 document.getElementById('themeToggle').addEventListener('click', toggleTheme);
 document.getElementById('exportTextBtn')
@@ -55,6 +74,13 @@ document.getElementById('confirmBackupBtn')
 
 document.getElementById('backupSelectAll')
     ?.addEventListener('change', toggleSelectAllBackups);
+
+document
+    .getElementById('submitEodBtn')
+    .addEventListener(
+        'click',
+        submitTodayEOD
+    );
 
 // COMPATIBILITY - MOBILE MENU
 
@@ -127,6 +153,14 @@ function getTodayDateValue() {
     const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
 
     return `${values.year}-${values.month}-${values.day}`;
+}
+
+function formatFormsDate(dateString) {
+
+    const [year, month, day] = dateString.split('-');
+
+    return `${Number(month)}/${Number(day)}/${year}`;
+
 }
 
 function getCurrentTimeValue() {
@@ -209,33 +243,272 @@ function toggleTheme() {
     updateThemeButton();
 }
 
-function openForms() {
-    window.open('https://forms.cloud.microsoft/pages/responsepage.aspx?id=VC0K9rQDFEWyn1uxr3fPC2pICO7P_hdMkKpJ5I4OTyFUNzVSOUZNSDVNNU5UUUVXSjMwOTE3OVdNNy4u&origin=lprLink&route=shorturl', '_blank');
+/* ==========================================================
+   SETTINGS
+========================================================== */
+
+const DEFAULT_SETTINGS = {
+
+    version: 1,
+
+    automationEnabled: true,
+
+    autoBackup: true,
+
+    autoOpenForm: true,
+
+    formsUrl: 'https://forms.cloud.microsoft/pages/responsepage.aspx?id=VC0K9rQDFEWyn1uxr3fPC2pICO7P_hdMkKpJ5I4OTyFUNzVSOUZNSDVNNU5UUUVXSjMwOTE3OVdNNy4u&origin=lprLink&route=shorturl',
+
+    employeeId: '',
+
+    attendanceStatus: 'Present',
+
+    starRating6: 5,
+
+    starRating7: 5,
+
+    defaultText8: '',
+
+    defaultText9: ''
+
+};
+
+function getSettings() {
+
+    const saved = JSON.parse(
+        localStorage.getItem(SETTINGS_KEY) || '{}'
+    );
+
+    return {
+
+        ...DEFAULT_SETTINGS,
+
+        ...saved
+
+    };
+
+}
+
+function saveSettings(settings) {
+
+    localStorage.setItem(
+        SETTINGS_KEY,
+        JSON.stringify(settings)
+    );
+
+}
+
+function resetSettings() {
+
+    localStorage.removeItem(SETTINGS_KEY);
+
+    return getSettings();
+
+}
+
+function buildAutomationPayload() {
+
+    const settings = getSettings();
+
+    const today = getTodayDateValue();
+
+    return {
+
+        empId: settings.employeeId,
+
+        attendanceStatus: settings.attendanceStatus,
+
+        date: formatFormsDate(today),
+
+        report: generateReport(today),
+
+        starRating6: settings.starRating6,
+
+        starRating7: settings.starRating7,
+
+        defaultText8: settings.defaultText8,
+
+        defaultText9: settings.defaultText9
+
+    };
+
+}
+
+function validateTodaySubmission() {
+
+    const settingsValidation = validateAutomationSettings();
+
+    if (!settingsValidation.valid) {
+
+        showToast(
+            'Please complete your automation settings.',
+            'error'
+        );
+
+        openSettingsModal();
+
+        return false;
+
+    }
+
+    const activities = getActivities(getTodayDateValue());
+
+    if (activities.length === 0) {
+
+        showToast(
+            'No activities recorded for today.',
+            'error'
+        );
+
+        return false;
+
+    }
+
+    return true;
+
+}
+
+function submitTodayEOD() {
+
+    const settings = getSettings();
+
+    if (!settings.automationEnabled) {
+
+        showToast(
+            'Automation is disabled.',
+            'error'
+        );
+
+        return;
+
+    }
+
+    if (!validateTodaySubmission()) {
+
+        return;
+
+    }
+
+    const payload = buildAutomationPayload();
+
+    if (settings.autoBackup) {
+
+        backupTodayActivities();
+
+    }
+
+    openForms(payload);
+
+    showToast(
+        'Opening Microsoft Forms...',
+        'success'
+    );
+
+}
+
+function openForms(payload = null) {
+
+    const settings = getSettings();
+
+    let url = settings.formsUrl;
+
+    if (payload) {
+
+        url += '#eodauto=' + encodeURIComponent(
+            JSON.stringify(payload)
+        );
+
+    }
+
+    window.open(url, '_blank');
+
 }
 
 function getAllActivities() {
     return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
 }
 
-function backupAllActivities() {
-    const activities = getAllActivities();
-    const backup = {
-        app: 'EODauto',
-        version: 1,
-        exportedAt: new Date().toISOString(),
-        activities
-    };
-    const json = JSON.stringify(backup, null, 2);
-    const element = document.createElement('a');
-    const dateStamp = new Date().toISOString().slice(0, 10);
+function downloadBackup(activities, fileName) {
 
-    element.setAttribute('href', 'data:application/json;charset=utf-8,' + encodeURIComponent(json));
-    element.setAttribute('download', `EODauto_Backup_${dateStamp}.json`);
-    element.style.display = 'none';
+    const backup = {
+
+        app: 'EODauto',
+
+        version: 1,
+
+        exportedAt: new Date().toISOString(),
+
+        activities
+
+    };
+
+    const json = JSON.stringify(backup, null, 2);
+
+    const element = document.createElement('a');
+
+    element.href =
+        'data:application/json;charset=utf-8,' +
+        encodeURIComponent(json);
+
+    element.download = fileName;
+
     document.body.appendChild(element);
+
     element.click();
+
     document.body.removeChild(element);
-    showToast('JSON backup downloaded', 'success');
+
+}
+
+function backupAllActivities() {
+
+    const activities = getAllActivities();
+
+    const dateStamp = new Date()
+        .toISOString()
+        .slice(0, 10);
+
+    downloadBackup(
+
+        activities,
+
+        `EODauto_Backup_${dateStamp}.json`
+
+    );
+
+    showToast(
+        'JSON backup downloaded',
+        'success'
+    );
+
+}
+
+function backupTodayActivities() {
+
+    const today = getTodayDateValue();
+
+    const activities = getActivities(today);
+
+    if (activities.length === 0) {
+
+        return;
+
+    }
+
+    const backup = {
+
+        [today]: activities
+
+    };
+
+    downloadBackup(
+
+        backup,
+
+        `EODauto_Backup_${today}.json`
+
+    );
+
 }
 
 /* ==========================================================
@@ -584,6 +857,95 @@ function closeEditModal() {
     document.getElementById('editError').classList.remove('show');
 }
 
+/* ==========================================================
+   SETTINGS MODAL
+========================================================== */
+
+function openSettingsModal() {
+
+    loadSettingsIntoForm();
+
+    document
+        .getElementById('settingsModal')
+        .classList
+        .add('show');
+
+}
+
+function closeSettingsModal() {
+
+    document
+        .getElementById('settingsModal')
+        .classList
+        .remove('show');
+
+}
+
+function loadSettingsIntoForm() {
+
+    const settings = getSettings();
+
+    document.getElementById('formsUrl').value = settings.formsUrl;
+    document.getElementById('employeeId').value = settings.employeeId;
+    document.getElementById('attendanceStatus').value = settings.attendanceStatus;
+
+    document.getElementById('starRating6').value = settings.starRating6;
+    document.getElementById('starRating7').value = settings.starRating7;
+
+    document.getElementById('defaultText8').value = settings.defaultText8;
+    document.getElementById('defaultText9').value = settings.defaultText9;
+
+    document.getElementById('automationEnabled').checked = settings.automationEnabled;
+    document.getElementById('autoBackup').checked = settings.autoBackup;
+    document.getElementById('autoOpenForm').checked = settings.autoOpenForm;
+
+}
+
+function saveSettingsFromForm() {
+
+    const settings = getSettings();
+
+    settings.formsUrl = document.getElementById('formsUrl').value.trim();
+
+    settings.employeeId = document.getElementById('employeeId').value.trim();
+
+    settings.attendanceStatus = document.getElementById('attendanceStatus').value;
+
+    settings.starRating6 = Number(
+        document.getElementById('starRating6').value
+    );
+
+    settings.starRating7 = Number(
+        document.getElementById('starRating7').value
+    );
+
+    settings.defaultText8 =
+        document.getElementById('defaultText8').value.trim();
+
+    settings.defaultText9 =
+        document.getElementById('defaultText9').value.trim();
+
+    settings.automationEnabled =
+        document.getElementById('automationEnabled').checked;
+
+    settings.autoBackup =
+        document.getElementById('autoBackup').checked;
+
+    settings.autoOpenForm =
+        document.getElementById('autoOpenForm').checked;
+
+    saveSettings(settings);
+    updateAutomationStatus();
+
+    closeSettingsModal();
+
+    showToast(
+        'Settings saved successfully!',
+        'success'
+    );
+
+}
+
 function saveEditedActivity() {
     const newDate = document.getElementById('editDate').value;
     const startTime = document.getElementById('editStartTime').value;
@@ -749,6 +1111,7 @@ function deleteActivity(id, date) {
         showToast('Activity deleted', 'info');
         loadActivities();
         loadHistoryDates();
+        updateAutomationStatus();
     }
 }
 
@@ -858,21 +1221,27 @@ function copySelectedReport() {
 document.getElementById('date').addEventListener('change', loadActivities);
 
 // Close modal when clicking outside
-window.addEventListener('click', function(event){
+window.onclick = function (event) {
 
-    if(event.target === document.getElementById('editModal')){
+    if (event.target === document.getElementById('editModal')) {
 
         closeEditModal();
 
     }
 
-    if(event.target === document.getElementById('backupModal')){
+    if (event.target === document.getElementById('backupModal')) {
 
         closeBackupModal();
 
     }
 
-});
+    if (event.target === document.getElementById('settingsModal')) {
+
+        closeSettingsModal();
+
+    }
+
+};
 
 function updateHeaderDate() {
     const headerDate = document.getElementById('headerDate');
@@ -887,12 +1256,87 @@ function updateHeaderDate() {
 }
 
 updateHeaderDate();
+updateAutomationStatus();
 
 function updateThemeButton() {
     const btn = document.querySelector('.theme-toggle');
     const isLight = document.body.classList.contains('light-mode');
     btn.innerHTML = isLight ? '&#x2600;&#xFE0F;' : '&#x1F319;';
 }
+
+function validateAutomationSettings() {
+
+    const settings = getSettings();
+
+    const missing = [];
+
+    if (!settings.formsUrl)
+        missing.push('Microsoft Forms URL');
+
+    if (!settings.employeeId)
+        missing.push('Employee ID');
+
+    if (!settings.attendanceStatus)
+        missing.push('Attendance Status');
+
+    if (!settings.starRating6)
+        missing.push('Default Rating #1');
+
+    if (!settings.starRating7)
+        missing.push('Default Rating #2');
+
+    if (!settings.defaultText8)
+        missing.push('Default Answer #8');
+
+    if (!settings.defaultText9)
+        missing.push('Default Answer #9');
+
+    return {
+
+        valid: missing.length === 0,
+
+        missing
+
+    };
+
+}
+
+function updateAutomationStatus() {
+
+    const badge = document.getElementById('automationStatus');
+
+    if (!badge) return;
+
+    const validation = validateAutomationSettings();
+
+    if (!validation.valid) {
+
+        badge.className = 'automation-status warning';
+
+        badge.textContent = '🟡 Setup Required';
+
+        return;
+
+    }
+
+    const todayActivities = getActivities(getTodayDateValue());
+
+    if (todayActivities.length === 0) {
+
+        badge.className = 'automation-status error';
+
+        badge.textContent = '🔴 No Activities';
+
+        return;
+
+    }
+
+    badge.className = 'automation-status ready';
+
+    badge.textContent = '🟢 Ready to Submit';
+
+}
+
 
 document.querySelectorAll('.tab-button').forEach(function(button) {
 

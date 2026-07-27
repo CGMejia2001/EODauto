@@ -1155,7 +1155,7 @@ button:active{
 
     display:grid;
 
-    grid-template-columns:repeat(2,1fr);
+    grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
 
     gap:12px;
 
@@ -1184,6 +1184,70 @@ button:active{
     text-align:center;
 
     padding:32px 20px;
+
+}
+
+.export-label{
+
+    margin-bottom:12px;
+
+    color:var(--text-secondary);
+
+    font-size:.85rem;
+
+    font-weight:600;
+
+    text-transform:uppercase;
+
+    letter-spacing:.08em;
+
+}
+
+.report-divider{
+
+    margin:18px 0;
+
+    border:none;
+
+    border-top:1px solid var(--border);
+
+}
+
+.submit-eod-btn{
+
+    width:100%;
+
+    padding:14px 18px;
+
+    border:none;
+
+    border-radius:var(--radius);
+
+    background:var(--primary);
+
+    color:#fff;
+
+    font-size:1rem;
+
+    font-weight:700;
+
+    cursor:pointer;
+
+    transition:var(--transition);
+
+}
+
+.submit-eod-btn:hover{
+
+    background:var(--primary-hover);
+
+    transform:translateY(-2px);
+
+}
+
+.submit-eod-btn:active{
+
+    transform:translateY(0);
 
 }
 
@@ -1542,6 +1606,101 @@ body.light-mode .backup-date:hover{
 
 }
 
+/* ==========================================================
+   AUTOMATION STATUS
+========================================================== */
+
+.automation-status{
+
+    display:flex;
+    align-items:center;
+    gap:6px;
+
+    padding:8px 14px;
+
+    border-radius:999px;
+
+    font-size:.85rem;
+
+    font-weight:600;
+
+    white-space:nowrap;
+
+}
+
+.automation-status.ready{
+
+    background:rgba(80,250,123,.15);
+    color:var(--success);
+
+}
+
+.automation-status.warning{
+
+    background:rgba(255,184,77,.15);
+    color:#ffb84d;
+
+}
+
+.automation-status.error{
+
+    background:rgba(255,85,85,.15);
+    color:var(--danger);
+
+}
+
+/* ==========================================================
+   EOD ACTION BUTTONS
+========================================================== */
+
+.eod-actions{
+
+    display:flex;
+
+    gap:12px;
+
+    flex-wrap:wrap;
+
+}
+
+.submit-button{
+
+    flex:1;
+
+    min-width:220px;
+
+    background:var(--primary);
+
+    color:white;
+
+    border:none;
+
+    border-radius:var(--radius);
+
+    padding:12px 20px;
+
+    font-weight:600;
+
+    cursor:pointer;
+
+    transition:var(--transition);
+
+}
+
+.submit-button:hover{
+
+    background:var(--primary-hover);
+
+    transform:translateY(-1px);
+
+}
+
+.forms-button{
+
+    white-space:nowrap;
+
+}
+
 /* =========================================================
    TOASTS
 ========================================================= */
@@ -1866,7 +2025,11 @@ footer p{
 
     .export-buttons{
 
-        grid-template-columns:1fr;
+        display:grid;
+
+        grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+
+        gap:12px;
 
     }
 

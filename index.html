@@ -45,15 +45,6 @@
                 aria-label="Application Navigation">
 
                 <button
-                    class="forms-button"
-                    id="formsBtn"
-                    type="button">
-
-                    Open EOD Form
-
-                </button>
-
-                <button
                     class="backup-button"
                     id="backupBtn"
                     type="button">
@@ -84,6 +75,16 @@
                     title="Toggle Theme">
 
                     🌙
+                </button>
+
+                <button
+                    class="settings-button"
+                    id="settingsBtn"
+                    type="button"
+                    title="Automation Settings">
+
+                    ⚙
+
                 </button>
             </nav>
         </div>
@@ -260,7 +261,19 @@
 
                         <div class="export-section">
 
+                            <div class="export-label">
+
+                                Report Actions
+
+                            </div>
+
                             <div class="export-buttons">
+
+                                <button id="copyReportBtn">
+
+                                    Copy Report
+
+                                </button>
 
                                 <button id="exportTextBtn">
 
@@ -268,12 +281,25 @@
 
                                 </button>
 
-                                <button id="copyReportBtn">
+                                <button id="formsBtn">
 
-                                    Copy Report
+                                    Open EOD Form
 
                                 </button>
+
                             </div>
+
+                            <hr class="report-divider">
+
+                            <button
+                                id="submitEodBtn"
+                                class="submit-eod-btn"
+                                type="button">
+
+                                Submit Today's EOD
+
+                            </button>
+
                         </div>
                     </div>
 
@@ -304,7 +330,19 @@
 
                         <div class="export-section">
 
+                            <div class="export-label">
+
+                                Report Actions
+
+                            </div>
+
                             <div class="export-buttons">
+
+                                <button id="copyHistoryBtn">
+
+                                    Copy Report
+
+                                </button>
 
                                 <button id="exportHistoryBtn">
 
@@ -312,12 +350,8 @@
 
                                 </button>
 
-                                <button id="copyHistoryBtn">
-
-                                    Copy Report
-
-                                </button>
                             </div>
+
                         </div>
                     </div>
                 </section>
@@ -438,6 +472,222 @@
             </form>
         </div>
     </div>
+
+<!-- Settings Modal -->
+
+<div
+    id="settingsModal"
+    class="modal">
+
+    <div class="modal-content">
+
+        <div class="modal-header">
+
+            <h2>Automation Settings</h2>
+            <div
+                id="automationStatus"
+                class="automation-status warning">
+
+                🟡 Setup Required
+
+            </div>
+
+            <p class="modal-subtitle">
+
+                Configure Microsoft Forms automation.
+
+            </p>
+
+        </div>
+
+        <form id="settingsForm">
+
+            <div class="form-group">
+
+                <label for="formsUrl">
+
+                    Microsoft Forms URL
+                    <small>(Change only if the form link changes.)</small>
+
+                </label>
+
+                <input
+                    type="url"
+                    id="formsUrl">
+
+            </div>
+
+            <div class="form-group">
+
+                <label for="employeeId">
+
+                    Employee ID
+
+                </label>
+
+                <input
+                    type="text"
+                    id="employeeId">
+
+            </div>
+
+            <div class="form-group">
+
+                <label for="attendanceStatus">
+
+                    Attendance Status
+
+                </label>
+
+                <select id="attendanceStatus">
+
+                    <option value="Present – Training (Bootcamp)">
+                        Present – Training (Bootcamp)
+                    </option>
+
+                    <option value="Present – Deployed (Hybrid)">
+                        Present – Deployed (Hybrid)
+                    </option>
+
+                </select>
+            </div>
+
+            <div class="form-group">
+
+                <label>
+
+                    Default Rating #1
+
+                </label>
+
+                <select id="starRating6">
+
+                    <option value="5">★★★★★</option>
+                    <option value="4">★★★★☆</option>
+                    <option value="3">★★★☆☆</option>
+                    <option value="2">★★☆☆☆</option>
+                    <option value="1">★☆☆☆☆</option>
+
+                </select>
+
+            </div>
+
+            <div class="form-group">
+
+                <label>
+
+                    Default Rating #2
+
+                </label>
+
+                <select id="starRating7">
+
+                    <option value="5">★★★★★</option>
+                    <option value="4">★★★★☆</option>
+                    <option value="3">★★★☆☆</option>
+                    <option value="2">★★☆☆☆</option>
+                    <option value="1">★☆☆☆☆</option>
+
+                </select>
+
+            </div>
+
+            <div class="form-group">
+
+                <label>
+
+                    Default Answer #8
+
+                </label>
+
+                <textarea
+                    id="defaultText8"
+                    rows="3"></textarea>
+
+            </div>
+
+            <div class="form-group">
+
+                <label>
+
+                    Default Answer #9
+
+                </label>
+
+                <textarea
+                    id="defaultText9"
+                    rows="3"></textarea>
+
+            </div>
+
+            <label class="checkbox-row">
+
+                <input
+                    type="checkbox"
+                    id="automationEnabled">
+
+                <span>
+
+                    Enable Automation
+
+                </span>
+
+            </label>
+
+            <label class="checkbox-row">
+
+                <input
+                    type="checkbox"
+                    id="autoBackup">
+
+                <span>
+
+                    Automatically backup before submission
+
+                </span>
+
+            </label>
+
+            <label class="checkbox-row">
+
+                <input
+                    type="checkbox"
+                    id="autoOpenForm">
+
+                <span>
+
+                    Open Microsoft Forms automatically
+
+                </span>
+
+            </label>
+
+            <div class="modal-actions">
+
+                <button
+                    type="button"
+                    id="cancelSettingsBtn"
+                    class="btn-secondary">
+
+                    Cancel
+
+                </button>
+
+                <button
+                    type="submit"
+                    class="btn-primary">
+
+                    Save Settings
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
 
     <!-- Backup Modal -->
 <div
