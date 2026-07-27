@@ -971,8 +971,34 @@ function clickSubmit() {
 
 let lastQuestionNode = null;
 
+let lastPageSignature = "";
+
 function pageChanged() {
 
+    // Intro page
+    const startButton = [...document.querySelectorAll("button")]
+        .find(button =>
+            button.innerText.trim() === "Start now" &&
+            button.offsetParent !== null
+        );
+
+    if (startButton) {
+
+        const signature = "intro";
+
+        if (signature === lastPageSignature) {
+
+            return false;
+
+        }
+
+        lastPageSignature = signature;
+
+        return true;
+
+    }
+
+    // Normal question pages
     const questions = getQuestions();
 
     if (questions.length === 0) {
@@ -981,15 +1007,86 @@ function pageChanged() {
 
     }
 
-    if (questions[0] === lastQuestionNode) {
+    const signature = questions[0].innerText;
+
+    if (signature === lastPageSignature) {
 
         return false;
 
     }
 
-    lastQuestionNode = questions[0];
+    lastPageSignature = signature;
 
     return true;
+
+}
+
+    function clickStartNow() {
+
+    const interval = setInterval(function () {
+
+        const button = [...document.querySelectorAll("button")]
+            .find(button =>
+                button.innerText.trim() === "Start now" &&
+                button.offsetParent !== null
+            );
+
+        if (!button) {
+
+            return;
+
+        }
+
+        button.click();
+
+        clearInterval(interval);
+
+        logSuccess(
+            "Start Now clicked."
+        );
+
+    }, 500);
+
+}
+
+function fillPage0() {
+
+    console.clear();
+
+    const buttons = [...document.querySelectorAll("button")];
+
+    console.log("Buttons found:", buttons.length);
+
+    buttons.forEach((button, i) => {
+
+        console.log(
+            i,
+            button.innerText,
+            button.offsetParent !== null
+        );
+
+    });
+
+    const startButton = buttons.find(button =>
+        button.innerText.trim() === "Start now" &&
+        button.offsetParent !== null
+    );
+
+    console.log("Start button:", startButton);
+
+    if (!startButton) {
+
+        logError("Start button not found.");
+
+        return;
+
+    }
+
+    console.log("About to click...");
+
+    startButton.click();
+
+    console.log("Click sent.");
 
 }
 
@@ -1216,12 +1313,10 @@ stopTimer();
 
 const PAGE_HANDLERS = [
 
+    fillPage0,
     fillPage1,
-
     fillPage2,
-
     fillPage3,
-
     fillPage4
 
 ];
@@ -1243,7 +1338,11 @@ const automation = setInterval(function () {
         return;
 
     }
-
+console.log(
+    "Current Page:",
+    currentPage,
+    PAGE_HANDLERS[currentPage].name
+);
     PAGE_HANDLERS[currentPage](payload);
 
     currentPage++;
