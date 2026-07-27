@@ -86,6 +86,7 @@ Open **Settings** in the EOD Task Tracker and complete the required automation s
 [✔] Add **Restore from JSON** functionality for previously backed-up reports. 
 - [ ] Improve the mobile UI layout and responsiveness across different screen sizes.
 - [ ] *(Tentative)* Add a calendar view to browse EOD reports over time.
+- [ ] Fix: Opening the EOD Form always trigger the script
 [✔] Add compatibility with automation scripts.
 
 ## Future Roadmap
