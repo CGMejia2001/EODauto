@@ -31,6 +31,8 @@ EOD REPORT - Mon, Jul 17, 2026
 10:30 AM - 11:30 AM | Meeting: Team standup
 9:30 AM - 10:30 AM | Deployment: Project deployment
 
+```
+
 ## Automation
 
 The EOD automation automatically fills supported fields in the Microsoft Forms EOD report using a Tampermonkey userscript.
@@ -84,6 +86,7 @@ Open **Settings** in the EOD Task Tracker and complete the required automation s
 [✔] Add **Restore from JSON** functionality for previously backed-up reports. 
 - [ ] Improve the mobile UI layout and responsiveness across different screen sizes.
 - [ ] *(Tentative)* Add a calendar view to browse EOD reports over time.
+- [ ] Fix: Opening the EOD Form always trigger the script
 [✔] Add compatibility with automation scripts.
 
 ## Future Roadmap
