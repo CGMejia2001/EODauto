@@ -76,16 +76,6 @@
 
                     🌙
                 </button>
-
-                <button
-                    class="settings-button"
-                    id="settingsBtn"
-                    type="button"
-                    title="Automation Settings">
-
-                    ⚙
-
-                </button>
             </nav>
         </div>
     </header>
@@ -95,10 +85,19 @@
 
         <div class="container">
 
-            <div class="main-content">
+            <div class="app-view-switcher" aria-label="Workspace view">
+                <button class="app-view-button active" type="button" data-view="daily">
+                    Daily EOD
+                </button>
+                <button class="app-view-button" type="button" data-view="automation">
+                    Automation
+                </button>
+            </div>
+
+            <div class="main-content" id="mainContent" data-view="daily">
 
                 <!-- Activity Form -->
-                <section class="card">
+                <section class="card daily-view activity-card">
 
                     <h2>Add Activity</h2>
 
@@ -187,7 +186,7 @@
                 </section>
 
                 <!-- Reports -->
-                <section class="card">
+                <section class="card daily-view reports-card">
 
                     <h2>EOD Reports</h2>
                     <div
@@ -300,6 +299,10 @@
 
                             </button>
 
+                            <div id="automationSetupReminder" class="automation-setup-reminder">
+                                Complete all automation setup steps before submitting.
+                            </div>
+
                         </div>
                     </div>
 
@@ -354,6 +357,162 @@
 
                         </div>
                     </div>
+                </section>
+
+                <!-- Automation Setup -->
+                <section class="card automation-view automation-wizard-card">
+                    <h2>Automation Setup</h2>
+
+                    <div class="wizard-checklist">
+
+                        <details class="wizard-step" id="wizardStepTampermonkey">
+                            <summary class="wizard-step-summary">
+                                <div>
+                                    <div class="wizard-step-title">Install Tampermonkey</div>
+                                    <div class="wizard-step-copy">
+                                        Install the browser extension that runs EODAuto automation.
+                                    </div>
+                                </div>
+                                <div class="wizard-step-action">
+                                    <label class="wizard-checkbox">
+                                        <input type="checkbox" id="setupTampermonkeyCheckbox">
+                                        <span>Installed</span>
+                                    </label>
+                                </div>
+                            </summary>
+                            <div class="wizard-step-content">
+                                <p><a href="https://tampermonkey.net/?ext=dhdg&browser=chrome" target="_blank" rel="noopener">Download Tampermonkey</a> and install it in your browser. After installation, return here and check the box.</p>
+                            </div>
+                        </details>
+
+                        <details class="wizard-step" id="wizardStepScript">
+                            <summary class="wizard-step-summary">
+                                <div>
+                                    <div class="wizard-step-title">Install EODAuto Automation</div>
+                                    <div class="wizard-step-copy">
+                                        Open the automation script so Tampermonkey can install it automatically.
+                                    </div>
+                                </div>
+                                <div class="wizard-step-action">
+                                    <label class="wizard-checkbox">
+                                        <input type="checkbox" id="setupScriptCheckbox">
+                                        <span>Installed</span>
+                                    </label>
+                                </div>
+                            </summary>
+                            <div class="wizard-step-content">
+                                <ol>
+                                    <li>Open the EODAuto script on GitHub Gist: <a href="https://gist.github.com/CGMejia2001/66a2e7a3972d83bdd9325d8642da30ff" target="_blank" rel="noopener">View Gist</a>.</li>
+                                    <li>After installing the Tampermonkey extension, open your browser's extensions list and click Tampermonkey.</li>
+                                    <li>In Tampermonkey, click <strong>Dashboard</strong>. When redirected, click the <strong>+</strong> (create) icon to add a new userscript.</li>
+                                    <li>Copy the contents of the Gist and paste it into the Tampermonkey editor, then choose <strong>File &gt; Save</strong>.</li>
+                                    <li>Return to Tampermonkey's <strong>Installed Userscripts</strong> list and ensure the EODAuto script is enabled.</li>
+                                    <li>Once enabled, mark this step complete.</li>
+                                </ol>
+                            </div>
+                        </details>
+
+                        <details class="wizard-step" id="wizardStepConfigure">
+                            <summary class="wizard-step-summary">
+                                <div>
+                                    <div class="wizard-step-title">Configure Automation</div>
+                                    <div class="wizard-step-copy">
+                                        Fill in required automation settings using the form below. The checkbox will stay synced with valid automation configuration.
+                                    </div>
+                                </div>
+                                <div class="wizard-step-action">
+                                    <label class="wizard-checkbox">
+                                        <input type="checkbox" id="setupConfiguredCheckbox">
+                                        <span>Configured</span>
+                                    </label>
+                                </div>
+                            </summary>
+                            <div class="wizard-step-content">
+                                <p>Complete the inline automation settings form below and then save to keep this step aligned with your configuration.</p>
+                            </div>
+                        </details>
+
+                        <details class="wizard-step" id="wizardStepTest">
+                            <summary class="wizard-step-summary">
+                                <div>
+                                    <div class="wizard-step-title">Run Test</div>
+                                    <div class="wizard-step-copy">
+                                        Launch a small automation test and confirm Mission Control appears.
+                                    </div>
+                                </div>
+                                <div class="wizard-step-action">
+                                    <label class="wizard-checkbox">
+                                        <input type="checkbox" id="setupTestedCheckbox">
+                                        <span>Test Completed</span>
+                                    </label>
+                                </div>
+                            </summary>
+                            <div class="wizard-step-content">
+                                <p>Run the test automation and confirm Mission Control appears. After verifying the test completed successfully, check this box.</p>
+                                <div class="wizard-step-buttons">
+                                    <button type="button" id="runAutomationTestBtn" class="btn-primary">Launch Setup Test</button>
+                                    <button type="button" id="confirmTestCompletedBtn" class="btn-secondary hidden">Confirm Test Completed</button>
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+
+                </section>
+
+                <section class="card automation-view automation-settings-card" id="automationSettingsCard">
+                    <h2>Automation Settings</h2>
+                    <form id="settingsForm" class="settings-card-form" onsubmit="return false;">
+                        <div class="form-group">
+                            <label for="formsUrl">Microsoft Forms URL</label>
+                            <input type="url" id="formsUrl" placeholder="https://..." required>
+                        </div>
+                        <div class="form-group">
+                            <label for="employeeId">Employee ID</label>
+                            <input type="text" id="employeeId" placeholder="Employee ID">
+                        </div>
+                        <div class="form-group">
+                            <label for="attendanceStatus">Attendance Status</label>
+                            <select id="attendanceStatus">
+                                <option value="Present – Training (Bootcamp)">Present – Training (Bootcamp)</option>
+                                <option value="Present – Deployed (Hybrid)">Present – Deployed (Hybrid)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="starRating6">How confident are you with today's topics?</label>
+                            <select id="starRating6">
+                                <option value="5">★★★★★</option>
+                                <option value="4">★★★★☆</option>
+                                <option value="3">★★★☆☆</option>
+                                <option value="2">★★☆☆☆</option>
+                                <option value="1">★☆☆☆☆</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="starRating7">How would you rate today's training/deployment session?</label>
+                            <select id="starRating7">
+                                <option value="5">★★★★★</option>
+                                <option value="4">★★★★☆</option>
+                                <option value="3">★★★☆☆</option>
+                                <option value="2">★★☆☆☆</option>
+                                <option value="1">★☆☆☆☆</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="defaultText8">Do you have any questions or support needed?</label>
+                            <textarea id="defaultText8" rows="3"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="defaultText9">Additional Feedback or Comments</label>
+                            <textarea id="defaultText9" rows="3"></textarea>
+                        </div>
+                        <label class="checkbox-row">
+                            <input type="checkbox" id="autoBackup">
+                            <span>Automatically backup before submission</span>
+                        </label>
+                        <div class="modal-actions">
+                            <button type="button" id="saveSettingsBtn" class="btn-primary">Save Settings</button>
+                        </div>
+                    </form>
                 </section>
             </div>
         </div>
@@ -473,221 +632,6 @@
         </div>
     </div>
 
-<!-- Settings Modal -->
-
-<div
-    id="settingsModal"
-    class="modal">
-
-    <div class="modal-content">
-
-        <div class="modal-header">
-
-            <h2>Automation Settings</h2>
-            <div
-                id="automationStatus"
-                class="automation-status warning">
-
-                🟡 Setup Required
-
-            </div>
-
-            <p class="modal-subtitle">
-
-                Configure Microsoft Forms automation.
-
-            </p>
-
-        </div>
-
-        <form id="settingsForm">
-
-            <div class="form-group">
-
-                <label for="formsUrl">
-
-                    Microsoft Forms URL
-                    <small>(Change only if the form link changes.)</small>
-
-                </label>
-
-                <input
-                    type="url"
-                    id="formsUrl">
-
-            </div>
-
-            <div class="form-group">
-
-                <label for="employeeId">
-
-                    Employee ID
-
-                </label>
-
-                <input
-                    type="text"
-                    id="employeeId">
-
-            </div>
-
-            <div class="form-group">
-
-                <label for="attendanceStatus">
-
-                    Attendance Status
-
-                </label>
-
-                <select id="attendanceStatus">
-
-                    <option value="Present – Training (Bootcamp)">
-                        Present – Training (Bootcamp)
-                    </option>
-
-                    <option value="Present – Deployed (Hybrid)">
-                        Present – Deployed (Hybrid)
-                    </option>
-
-                </select>
-            </div>
-
-            <div class="form-group">
-
-                <label>
-
-                    Default Rating #1
-
-                </label>
-
-                <select id="starRating6">
-
-                    <option value="5">★★★★★</option>
-                    <option value="4">★★★★☆</option>
-                    <option value="3">★★★☆☆</option>
-                    <option value="2">★★☆☆☆</option>
-                    <option value="1">★☆☆☆☆</option>
-
-                </select>
-
-            </div>
-
-            <div class="form-group">
-
-                <label>
-
-                    Default Rating #2
-
-                </label>
-
-                <select id="starRating7">
-
-                    <option value="5">★★★★★</option>
-                    <option value="4">★★★★☆</option>
-                    <option value="3">★★★☆☆</option>
-                    <option value="2">★★☆☆☆</option>
-                    <option value="1">★☆☆☆☆</option>
-
-                </select>
-
-            </div>
-
-            <div class="form-group">
-
-                <label>
-
-                    Default Answer #8
-
-                </label>
-
-                <textarea
-                    id="defaultText8"
-                    rows="3"></textarea>
-
-            </div>
-
-            <div class="form-group">
-
-                <label>
-
-                    Default Answer #9
-
-                </label>
-
-                <textarea
-                    id="defaultText9"
-                    rows="3"></textarea>
-
-            </div>
-
-            <label class="checkbox-row">
-
-                <input
-                    type="checkbox"
-                    id="automationEnabled">
-
-                <span>
-
-                    Enable Automation
-
-                </span>
-
-            </label>
-
-            <label class="checkbox-row">
-
-                <input
-                    type="checkbox"
-                    id="autoBackup">
-
-                <span>
-
-                    Automatically backup before submission
-
-                </span>
-
-            </label>
-
-            <label class="checkbox-row">
-
-                <input
-                    type="checkbox"
-                    id="autoOpenForm">
-
-                <span>
-
-                    Open Microsoft Forms automatically
-
-                </span>
-
-            </label>
-
-            <div class="modal-actions">
-
-                <button
-                    type="button"
-                    id="cancelSettingsBtn"
-                    class="btn-secondary">
-
-                    Cancel
-
-                </button>
-
-                <button
-                    type="submit"
-                    class="btn-primary">
-
-                    Save Settings
-
-                </button>
-
-            </div>
-
-        </form>
-
-    </div>
-
-</div>
 
     <!-- Backup Modal -->
 <div

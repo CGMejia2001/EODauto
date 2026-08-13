@@ -39,7 +39,7 @@ The EOD automation automatically fills supported fields in the Microsoft Forms E
 
 > **Acknowledgement:** This automation was inspired by the work of **Vic** and their EODAuto fork: https://github.com/victorjosefcaro/EODauto
 
-> **Note:** File uploads (e.g., Pluralsight screenshots) cannot be automated and must be uploaded manually before submitting the form.
+> **Note:** File uploads cannot be automated and must be uploaded manually before submitting the form.
 
 ### 1. Install Tampermonkey
 
@@ -50,7 +50,7 @@ The EOD automation automatically fills supported fields in the Microsoft Forms E
 ### 2. Install the Automation Script
 
 1. Open the **Tampermonkey Dashboard**.
-2. Select **Create a new script** (or **Install from File...** if using the provided `.user.js` file).
+2. Select **Create a new script** (or **Install from File...** if using the provided `tampermonkey.js` file).
 3. Replace the default template with the contents of `tampermonkey.js`.
 4. Save the script (**Ctrl + S**).
 5. Ensure the script is **Enabled**.

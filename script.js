@@ -2,10 +2,71 @@ const STORAGE_KEY = 'eodActivities';
 const THEME_KEY = 'eodTheme';
 const today = getTodayDateValue();
 const SETTINGS_KEY = 'eodSettings';
+const APP_VIEW_KEY = 'eodActiveView';
+const REPORT_TAB_KEY = 'eodActiveReportTab';
 let tampermonkeyDetected = false;
 let selectedHistoryDate = null;
 let editingActivityId = null;
 let editingActivityDate = null;
+
+const SETUP_KEYS = {
+    tampermonkey: 'setup_tampermonkey',
+    script: 'setup_script',
+    verified: 'setup_verified',
+    configured: 'setup_configured',
+    tested: 'setup_tested',
+    version: 'automation_version',
+    lastVerified: 'automation_last_verified',
+    lastSuccess: 'automation_last_successful'
+};
+
+const PENDING_SETUP_KEYS = {
+    tampermonkey: 'pending_setup_tampermonkey',
+    script: 'pending_setup_script'
+};
+
+const SETUP_CHECKBOX_KEYS = {
+    setupTampermonkeyCheckbox: 'tampermonkey',
+    setupScriptCheckbox: 'script',
+    setupConfiguredCheckbox: 'configured',
+    setupTestedCheckbox: 'tested'
+};
+
+const TAMPERMONKEY_INSTALL_URL = 'https://tampermonkey.net/?ext=dhdg&browser=chrome';
+const AUTOMATION_SCRIPT_URL = 'EODAuto-Forms-Automation.user.js';
+const AUTOMATION_TEST_PAGE = 'EODAuto-Test.html';
+
+const DEFAULT_SETTINGS = {
+    version: 1,
+    automationEnabled: true,
+    autoBackup: true,
+    autoOpenForm: true,
+    formsUrl: 'https://forms.cloud.microsoft/pages/responsepage.aspx?id=VC0K9rQDFEWyn1uxr3fPC2pICO7P_hdMkKpJ5I4OTyFUNzVSOUZNSDVNNU5UUUVXSjMwOTE3OVdNNy4u&origin=lprLink&route=shorturl',
+    employeeId: '',
+    attendanceStatus: 'Present – Training (Bootcamp)',
+    starRating6: 5,
+    starRating7: 5,
+    defaultText8: '',
+    defaultText9: ''
+};
+
+function getSettings() {
+    const saved = JSON.parse(
+        localStorage.getItem(SETTINGS_KEY) || '{}'
+    );
+
+    return {
+        ...DEFAULT_SETTINGS,
+        ...saved
+    };
+}
+
+function saveSettings(settings) {
+    localStorage.setItem(
+        SETTINGS_KEY,
+        JSON.stringify(settings)
+    );
+}
 
 // Initializion
 initializeTheme();
@@ -15,6 +76,80 @@ initializeTime();
 // Load activities on page load
 loadActivities();
 loadHistoryDates();
+loadSettingsIntoForm();
+
+// Global error handler to surface runtime issues during initialization
+window.addEventListener('error', function (ev) {
+    try {
+        const msg = ev && ev.message ? ev.message : String(ev);
+        console.error('Uncaught error:', ev.error || ev);
+        const container = document.getElementById('toastContainer');
+        if (container) {
+            const toast = document.createElement('div');
+            toast.className = 'toast error';
+            toast.innerHTML = `<span class="toast-icon">✕</span><span class="toast-message">Initialization error: ${msg}</span><button class="toast-close">×</button>`;
+            container.appendChild(toast);
+            toast.querySelector('.toast-close').addEventListener('click', function () { toast.remove(); });
+        } else {
+            alert('Initialization error: ' + msg);
+        }
+    } catch (e) {
+        console.error('Error handler failure', e);
+    }
+});
+
+// Ensure event bindings run after DOM is ready; re-attach safely if something failed earlier
+document.addEventListener('DOMContentLoaded', function () {
+    try {
+        const safeOn = (selectorOrEl, event, handler) => {
+            const el = typeof selectorOrEl === 'string' ? document.getElementById(selectorOrEl) : selectorOrEl;
+            if (!el) return;
+            el.addEventListener(event, handler);
+        };
+
+        safeOn('formsBtn', 'click', openForms);
+        safeOn('backupBtn', 'click', openBackupModal);
+        safeOn('restoreBtn', 'click', function () { const el = document.getElementById('restoreInput'); if (el) el.click(); });
+        safeOn('runAutomationTestBtn', 'click', runAutomationTest);
+        safeOn('confirmTestCompletedBtn', 'click', markAutomationTestCompleted);
+        safeOn('saveSettingsBtn', 'click', function (event) { event.preventDefault(); event.stopImmediatePropagation(); if (saveSettingsFromForm()) showToast('Settings saved successfully!', 'success'); });
+        safeOn('restoreInput', 'change', restoreActivitiesFromJson);
+        safeOn('themeToggle', 'click', toggleTheme);
+        safeOn('exportTextBtn', 'click', exportToText);
+        safeOn('copyReportBtn', 'click', copyToClipboard);
+        safeOn('exportHistoryBtn', 'click', exportSelectedReport);
+        safeOn('copyHistoryBtn', 'click', copySelectedReport);
+        safeOn('cancelEditBtn', 'click', closeEditModal);
+        safeOn('cancelBackupBtn', 'click', closeBackupModal);
+        safeOn('confirmBackupBtn', 'click', downloadSelectedBackup);
+        safeOn('backupSelectAll', 'change', toggleSelectAllBackups);
+        safeOn('submitEodBtn', 'click', submitTodayEOD);
+
+        // checkboxes: bind change handlers safely
+        Object.keys(SETUP_CHECKBOX_KEYS).forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.addEventListener('change', function (event) {
+                const key = SETUP_CHECKBOX_KEYS[id];
+                setSetupState(key, event.target.checked);
+            });
+            // keep click fallback too
+            el.addEventListener('click', function () {
+                setTimeout(() => setSetupState(SETUP_CHECKBOX_KEYS[id], el.checked), 0);
+            });
+        });
+
+        // re-run UI updates
+        updateSetupWizardUI();
+        updateAutomationStatusCard();
+        updateSubmitButtonState();
+        updateAutomationStatus();
+        enableAccordionAutoClose();
+    } catch (e) {
+        console.error('Error in DOMContentLoaded init:', e);
+        showToast && showToast('Initialization failed: ' + (e.message || e), 'error', 5000);
+    }
+});
 
 
 // Form submission
@@ -37,16 +172,18 @@ document.getElementById('restoreBtn').addEventListener('click', function() {
 
 });
 
-document.getElementById('settingsBtn').addEventListener('click', openSettingsModal);
+document.getElementById('runAutomationTestBtn')
+    ?.addEventListener('click', runAutomationTest);
 
-document.getElementById('cancelSettingsBtn').addEventListener('click', closeSettingsModal);
+document.getElementById('confirmTestCompletedBtn')
+    ?.addEventListener('click', markAutomationTestCompleted);
 
-document.getElementById('settingsForm').addEventListener('submit', function (e) {
-
-    e.preventDefault();
-
-    saveSettingsFromForm();
-
+document.getElementById('saveSettingsBtn')?.addEventListener('click', function (event) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (saveSettingsFromForm()) {
+        showToast('Settings saved successfully!', 'success');
+    }
 });
 
 document.getElementById('restoreInput').addEventListener('change', restoreActivitiesFromJson);
@@ -81,6 +218,63 @@ document
         'click',
         submitTodayEOD
     );
+document.getElementById('setupTampermonkeyCheckbox')
+    ?.addEventListener('change', function (event) {
+        setSetupState('tampermonkey', event.target.checked);
+        if (!event.target.checked) {
+            setPendingSetup('tampermonkey', false);
+        }
+    });
+
+document.getElementById('setupScriptCheckbox')
+    ?.addEventListener('change', function (event) {
+        setSetupState('script', event.target.checked);
+        if (!event.target.checked) {
+            setPendingSetup('script', false);
+        }
+    });
+
+document.getElementById('setupConfiguredCheckbox')
+    ?.addEventListener('change', function (event) {
+        setSetupState('configured', event.target.checked);
+    });
+
+document.getElementById('setupTestedCheckbox')
+    ?.addEventListener('change', function (event) {
+        setSetupState('tested', event.target.checked);
+    });
+
+// Fallback click handlers: ensure immediate UI sync when users click checkboxes
+// (some browsers/devices may fire click before change; use timeout to read final state)
+document.getElementById('setupTampermonkeyCheckbox')?.addEventListener('click', function (e) {
+    const cb = this;
+    setTimeout(() => setSetupState('tampermonkey', cb.checked), 0);
+});
+
+document.getElementById('setupScriptCheckbox')?.addEventListener('click', function (e) {
+    const cb = this;
+    setTimeout(() => setSetupState('script', cb.checked), 0);
+});
+
+document.getElementById('setupConfiguredCheckbox')?.addEventListener('click', function (e) {
+    const cb = this;
+    setTimeout(() => setSetupState('configured', cb.checked), 0);
+});
+
+document.getElementById('setupTestedCheckbox')?.addEventListener('click', function (e) {
+    const cb = this;
+    setTimeout(() => setSetupState('tested', cb.checked), 0);
+});
+
+window.addEventListener('message', function (event) {
+    if (!event.data || event.data.type !== 'eodauto-verification') return;
+
+    if (event.data.verified) {
+        setAutomationMeta('version', event.data.version || '2.0');
+        setAutomationMeta('lastVerified', new Date().toISOString());
+        showToast('Automation verified successfully!', 'success');
+    }
+});
 
 // COMPATIBILITY - MOBILE MENU
 
@@ -140,6 +334,270 @@ if (menuToggle && headerControls) {
 
             }
         });
+    });
+}
+
+function getSetupState(key) {
+    return localStorage.getItem(SETUP_KEYS[key]) === 'true';
+}
+
+function setSetupState(key, value) {
+    localStorage.setItem(SETUP_KEYS[key], value ? 'true' : 'false');
+    updateSetupWizardUI();
+    updateAutomationStatusCard();
+    updateSubmitButtonState();
+}
+
+function getAutomationMeta(key) {
+    return localStorage.getItem(SETUP_KEYS[key]) || 'Never';
+}
+
+function setAutomationMeta(key, value) {
+    if (value == null) {
+        localStorage.removeItem(SETUP_KEYS[key]);
+    } else {
+        localStorage.setItem(SETUP_KEYS[key], value);
+    }
+    updateAutomationStatusCard();
+}
+
+function getPendingSetup(key) {
+    return localStorage.getItem(PENDING_SETUP_KEYS[key]) === 'true';
+}
+
+function setPendingSetup(key, value) {
+    localStorage.setItem(PENDING_SETUP_KEYS[key], value ? 'true' : 'false');
+}
+
+function handleTampermonkeyInstall() {
+    if (getSetupState('tampermonkey')) {
+        setSetupState('tampermonkey', false);
+        setPendingSetup('tampermonkey', false);
+        showToast('Tampermonkey step reset.', 'info');
+        return;
+    }
+
+    window.open(TAMPERMONKEY_INSTALL_URL, '_blank');
+    setPendingSetup('tampermonkey', true);
+    showToast('Tampermonkey install page opened. Click again once installed.', 'info');
+}
+
+function handleAutomationScriptInstall() {
+    if (getSetupState('script')) {
+        setSetupState('script', false);
+        setPendingSetup('script', false);
+        showToast('Automation script step reset.', 'info');
+        return;
+    }
+
+    window.open(AUTOMATION_SCRIPT_URL, '_blank');
+    setPendingSetup('script', true);
+    showToast('Automation script opened for installation. Click again once installed.', 'info');
+}
+
+function toggleVerificationStep() {
+    scrollToAutomationSettings();
+}
+
+function toggleConfiguredStep() {
+    scrollToAutomationSettings();
+}
+
+function verifyAutomationInstallation() {
+    const settings = getSettings();
+
+    if (!settings.formsUrl) {
+        showToast('Please configure the form URL first.', 'error');
+        scrollToAutomationSettings();
+        return;
+    }
+
+    const url = `${settings.formsUrl}#eodauto=${encodeURIComponent(JSON.stringify({ verify: true }))}`;
+    window.open(url, '_blank');
+    showToast('Verification page opened. The userscript will report back automatically.', 'info');
+}
+
+function runAutomationTest() {
+    const validation = validateAutomationSettings();
+
+    if (!validation.valid) {
+        showToast('Complete automation configuration before running a test.', 'error');
+        scrollToAutomationSettings();
+        return;
+    }
+
+    const settings = getSettings();
+    const payload = {
+        testMode: true,
+        empId: settings.employeeId,
+        attendanceStatus: settings.attendanceStatus,
+        date: formatFormsDate(getTodayDateValue()),
+        report: 'EODAuto test report',
+        starRating6: settings.starRating6,
+        starRating7: settings.starRating7,
+        defaultText8: settings.defaultText8 || 'Test answer 8',
+        defaultText9: settings.defaultText9 || 'Test answer 9'
+    };
+
+    const url = `${AUTOMATION_TEST_PAGE}#eodauto=${encodeURIComponent(JSON.stringify({
+        verify: true,
+        testMode: true,
+        empId: settings.employeeId,
+        attendanceStatus: settings.attendanceStatus,
+        date: formatFormsDate(getTodayDateValue()),
+        report: 'EODAuto test report',
+        starRating6: settings.starRating6,
+        starRating7: settings.starRating7,
+        defaultText8: settings.defaultText8 || 'Test answer 8',
+        defaultText9: settings.defaultText9 || 'Test answer 9'
+    }))}`;
+    window.open(url, '_blank');
+    showToast('Automation test launched. Confirm when Mission Control appears.', 'info');
+    document.getElementById('confirmTestCompletedBtn')?.classList.remove('hidden');
+}
+
+function markAutomationTestCompleted() {
+    setSetupState('tested', true);
+    setAutomationMeta('lastSuccess', new Date().toISOString());
+    document.getElementById('confirmTestCompletedBtn')?.classList.add('hidden');
+    updateSubmitButtonState();
+    showToast('Automation test confirmed successfully.', 'success');
+}
+
+function updateSetupWizardUI() {
+    // Helper: ensure completed state visibly applies to details and summary
+    function applyCompletedStyle(stepEl, isComplete) {
+        if (!stepEl) return;
+        const summary = stepEl.querySelector('.wizard-step-summary');
+        if (isComplete) {
+            stepEl.classList.add('completed');
+            if (summary) summary.classList.add('completed');
+            // also apply inline style as a fallback for theming/priority issues
+            stepEl.style.borderColor = getComputedStyle(document.documentElement).getPropertyValue('--success') || '#50fa7b';
+            stepEl.style.background = 'rgba(80,250,123,.08)';
+            stepEl.style.boxShadow = '0 0 0 2px rgba(80,250,123,0.18)';
+        } else {
+            stepEl.classList.remove('completed');
+            if (summary) summary.classList.remove('completed');
+            stepEl.style.borderColor = '';
+            stepEl.style.background = '';
+            stepEl.style.boxShadow = '';
+        }
+    }
+    const tamperStep = document.getElementById('wizardStepTampermonkey');
+    const tamperCheckbox = document.getElementById('setupTampermonkeyCheckbox');
+    const tamperComplete = getSetupState('tampermonkey');
+    applyCompletedStyle(tamperStep, tamperComplete);
+    if (tamperCheckbox) tamperCheckbox.checked = !!tamperComplete;
+
+    const scriptStep = document.getElementById('wizardStepScript');
+    const scriptCheckbox = document.getElementById('setupScriptCheckbox');
+    const scriptComplete = getSetupState('script');
+    applyCompletedStyle(scriptStep, scriptComplete);
+    if (scriptCheckbox) scriptCheckbox.checked = !!scriptComplete;
+
+    const configureStep = document.getElementById('wizardStepConfigure');
+    const configureCheckbox = document.getElementById('setupConfiguredCheckbox');
+    const configureComplete = validateAutomationSettings().valid || getSetupState('configured');
+
+    applyCompletedStyle(configureStep, configureComplete);
+    if (configureCheckbox) configureCheckbox.checked = !!configureComplete;
+
+    const testStep = document.getElementById('wizardStepTest');
+    const testCheckbox = document.getElementById('setupTestedCheckbox');
+    const testComplete = getSetupState('tested');
+    applyCompletedStyle(testStep, testComplete);
+    if (testCheckbox) testCheckbox.checked = !!testComplete;
+
+    updateSubmitButtonState();
+}
+
+function updateAutomationStatusCard() {
+    const lastVerifiedEl = document.getElementById('statusLastVerified');
+    const lastSuccessEl = document.getElementById('statusLastSuccess');
+    const readyEl = document.getElementById('statusReady');
+
+    if (lastVerifiedEl) {
+        lastVerifiedEl.textContent = formatFriendlyDate(getAutomationMeta('lastVerified'));
+    }
+    if (lastSuccessEl) {
+        lastSuccessEl.textContent = formatFriendlyDate(getAutomationMeta('lastSuccess'));
+    }
+
+    const ready = isAutomationSetupComplete();
+    if (readyEl) {
+        readyEl.textContent = ready ? '🟢 Ready' : '🔴 Not Ready';
+    }
+}
+
+function isAutomationSetupComplete() {
+    return getSetupState('tampermonkey') &&
+           getSetupState('script') &&
+           (validateAutomationSettings().valid || getSetupState('configured')) &&
+           getSetupState('tested');
+}
+
+function getAutomationSetupProgress() {
+    const steps = [
+        getSetupState('tampermonkey'),
+        getSetupState('script'),
+        validateAutomationSettings().valid || getSetupState('configured'),
+        getSetupState('tested')
+    ];
+
+    const completed = steps.filter(Boolean).length;
+
+    return {
+        completed,
+        total: steps.length,
+        percent: Math.round((completed / steps.length) * 100)
+    };
+}
+
+function updateSubmitButtonState() {
+    const submitBtn = document.getElementById('submitEodBtn');
+    const reminder = document.getElementById('automationSetupReminder');
+    const complete = isAutomationSetupComplete();
+    const progress = getAutomationSetupProgress();
+
+    if (submitBtn) {
+        submitBtn.disabled = !complete;
+    }
+
+    if (reminder) {
+        reminder.classList.toggle('setup-ready', complete);
+        reminder.classList.toggle('setup-incomplete', !complete);
+        reminder.classList.toggle('setup-complete', complete);
+        reminder.innerHTML = `
+            <div class="setup-status-icon" aria-hidden="true">${complete ? 'OK' : '!'}</div>
+            <div class="setup-status-body">
+                <div class="setup-status-title">
+                    ${complete ? 'Automation ready' : 'Automation setup incomplete'}
+                </div>
+                <div class="setup-status-copy">
+                    ${complete
+                        ? "Ready to submit today's EOD."
+                        : `Complete ${progress.completed} of ${progress.total} setup steps before submitting.`}
+                </div>
+                <div class="setup-progress" aria-hidden="true">
+                    <span style="width:${progress.percent}%"></span>
+                </div>
+            </div>
+        `;
+    }
+}
+
+function formatFriendlyDate(value) {
+    if (!value || value === 'Never') return 'Never';
+    const date = new Date(value);
+    if (isNaN(date)) return value;
+    return date.toLocaleString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
     });
 }
 
@@ -247,57 +705,6 @@ function toggleTheme() {
    SETTINGS
 ========================================================== */
 
-const DEFAULT_SETTINGS = {
-
-    version: 1,
-
-    automationEnabled: true,
-
-    autoBackup: true,
-
-    autoOpenForm: true,
-
-    formsUrl: 'https://forms.cloud.microsoft/pages/responsepage.aspx?id=VC0K9rQDFEWyn1uxr3fPC2pICO7P_hdMkKpJ5I4OTyFUNzVSOUZNSDVNNU5UUUVXSjMwOTE3OVdNNy4u&origin=lprLink&route=shorturl',
-
-    employeeId: '',
-
-    attendanceStatus: 'Present',
-
-    starRating6: 5,
-
-    starRating7: 5,
-
-    defaultText8: '',
-
-    defaultText9: ''
-
-};
-
-function getSettings() {
-
-    const saved = JSON.parse(
-        localStorage.getItem(SETTINGS_KEY) || '{}'
-    );
-
-    return {
-
-        ...DEFAULT_SETTINGS,
-
-        ...saved
-
-    };
-
-}
-
-function saveSettings(settings) {
-
-    localStorage.setItem(
-        SETTINGS_KEY,
-        JSON.stringify(settings)
-    );
-
-}
-
 function resetSettings() {
 
     localStorage.removeItem(SETTINGS_KEY);
@@ -345,7 +752,7 @@ function validateTodaySubmission() {
             'error'
         );
 
-        openSettingsModal();
+        scrollToAutomationSettings();
 
         return false;
 
@@ -370,18 +777,17 @@ function validateTodaySubmission() {
 
 function submitTodayEOD() {
 
-    const settings = getSettings();
-
-    if (!settings.automationEnabled) {
-
-        showToast(
-            'Automation is disabled.',
-            'error'
-        );
-
+    if (!isAutomationSetupComplete()) {
+        showToast('Complete the automation setup before submitting today.', 'error');
+        switchAppView('automation');
+        document.querySelector('.automation-wizard-card')?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+        });
         return;
-
     }
+
+    const settings = getSettings();
 
     if (!validateTodaySubmission()) {
 
@@ -778,11 +1184,47 @@ function switchTab(tab, button) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
 
-    document.getElementById(tab + 'Tab').classList.add('active');
-    button.classList.add('active');
+    const tabContent = document.getElementById(tab + 'Tab');
+    const tabButton = button || document.querySelector(`.tab-button[data-tab="${tab}"]`);
+
+    if (!tabContent || !tabButton) return;
+
+    tabContent.classList.add('active');
+    tabButton.classList.add('active');
+    localStorage.setItem(REPORT_TAB_KEY, tab);
 
     if (tab === 'history') {
         loadHistoryDates();
+    }
+}
+
+function switchAppView(view) {
+    const mainContent = document.getElementById('mainContent');
+    if (!mainContent) return;
+
+    mainContent.dataset.view = view;
+    localStorage.setItem(APP_VIEW_KEY, view);
+
+    document.querySelectorAll('.app-view-button').forEach(button => {
+        button.classList.toggle('active', button.dataset.view === view);
+    });
+
+    if (view === 'automation') {
+        loadSettingsIntoForm();
+        updateSetupWizardUI();
+    }
+}
+
+function restoreWorkspaceState() {
+    const savedView = localStorage.getItem(APP_VIEW_KEY);
+    const savedTab = localStorage.getItem(REPORT_TAB_KEY);
+
+    if (savedView === 'daily' || savedView === 'automation') {
+        switchAppView(savedView);
+    }
+
+    if (savedTab === 'today' || savedTab === 'history') {
+        switchTab(savedTab);
     }
 }
 
@@ -861,33 +1303,18 @@ function closeEditModal() {
    SETTINGS MODAL
 ========================================================== */
 
-function openSettingsModal() {
-
-    loadSettingsIntoForm();
-
-    document
-        .getElementById('settingsModal')
-        .classList
-        .add('show');
-
-}
-
-function closeSettingsModal() {
-
-    document
-        .getElementById('settingsModal')
-        .classList
-        .remove('show');
-
-}
-
 function loadSettingsIntoForm() {
 
     const settings = getSettings();
 
     document.getElementById('formsUrl').value = settings.formsUrl;
     document.getElementById('employeeId').value = settings.employeeId;
-    document.getElementById('attendanceStatus').value = settings.attendanceStatus;
+    const attendanceSelect = document.getElementById('attendanceStatus');
+    if (attendanceSelect && Array.from(attendanceSelect.options).some(opt => opt.value === settings.attendanceStatus)) {
+        attendanceSelect.value = settings.attendanceStatus;
+    } else if (attendanceSelect) {
+        attendanceSelect.selectedIndex = 0;
+    }
 
     document.getElementById('starRating6').value = settings.starRating6;
     document.getElementById('starRating7').value = settings.starRating7;
@@ -895,55 +1322,44 @@ function loadSettingsIntoForm() {
     document.getElementById('defaultText8').value = settings.defaultText8;
     document.getElementById('defaultText9').value = settings.defaultText9;
 
-    document.getElementById('automationEnabled').checked = settings.automationEnabled;
     document.getElementById('autoBackup').checked = settings.autoBackup;
-    document.getElementById('autoOpenForm').checked = settings.autoOpenForm;
+
+    // Keep the configure step synced with the current saved settings.
+    setSetupState('configured', validateAutomationSettings().valid);
 
 }
 
 function saveSettingsFromForm() {
+    const form = document.getElementById('settingsForm');
+    if (form && !form.checkValidity()) {
+        form.reportValidity();
+        return false;
+    }
 
     const settings = getSettings();
 
     settings.formsUrl = document.getElementById('formsUrl').value.trim();
-
     settings.employeeId = document.getElementById('employeeId').value.trim();
-
     settings.attendanceStatus = document.getElementById('attendanceStatus').value;
-
-    settings.starRating6 = Number(
-        document.getElementById('starRating6').value
-    );
-
-    settings.starRating7 = Number(
-        document.getElementById('starRating7').value
-    );
-
-    settings.defaultText8 =
-        document.getElementById('defaultText8').value.trim();
-
-    settings.defaultText9 =
-        document.getElementById('defaultText9').value.trim();
-
-    settings.automationEnabled =
-        document.getElementById('automationEnabled').checked;
-
-    settings.autoBackup =
-        document.getElementById('autoBackup').checked;
-
-    settings.autoOpenForm =
-        document.getElementById('autoOpenForm').checked;
+    settings.starRating6 = Number(document.getElementById('starRating6').value);
+    settings.starRating7 = Number(document.getElementById('starRating7').value);
+    settings.defaultText8 = document.getElementById('defaultText8').value.trim();
+    settings.defaultText9 = document.getElementById('defaultText9').value.trim();
+    settings.autoBackup = document.getElementById('autoBackup').checked;
 
     saveSettings(settings);
+
+    if (validateAutomationSettings().valid) {
+        setSetupState('configured', true);
+    } else {
+        setSetupState('configured', false);
+    }
+
+    loadSettingsIntoForm();
     updateAutomationStatus();
+    updateSubmitButtonState();
 
-    closeSettingsModal();
-
-    showToast(
-        'Settings saved successfully!',
-        'success'
-    );
-
+    return true;
 }
 
 function saveEditedActivity() {
@@ -1235,11 +1651,6 @@ window.onclick = function (event) {
 
     }
 
-    if (event.target === document.getElementById('settingsModal')) {
-
-        closeSettingsModal();
-
-    }
 
 };
 
@@ -1256,7 +1667,27 @@ function updateHeaderDate() {
 }
 
 updateHeaderDate();
+updateSetupWizardUI();
+updateAutomationStatusCard();
+updateSubmitButtonState();
 updateAutomationStatus();
+
+// Accordion: auto-close previously opened wizard panels when a new one opens
+function enableAccordionAutoClose() {
+    const panels = Array.from(document.querySelectorAll('details.wizard-step'));
+    if (!panels || panels.length === 0) return;
+    panels.forEach(panel => {
+        panel.addEventListener('toggle', function () {
+            if (this.open) {
+                panels.forEach(other => {
+                    if (other !== this) other.removeAttribute('open');
+                });
+            }
+        });
+    });
+}
+
+enableAccordionAutoClose();
 
 function updateThemeButton() {
     const btn = document.querySelector('.theme-toggle');
@@ -1347,6 +1778,18 @@ document.querySelectorAll('.tab-button').forEach(function(button) {
     });
 
 });
+
+document.querySelectorAll('.app-view-button').forEach(function(button) {
+
+    button.addEventListener('click', function() {
+
+        switchAppView(button.dataset.view);
+
+    });
+
+});
+
+restoreWorkspaceState();
 
 document.addEventListener('keydown', function (event) {
 

@@ -1,13 +1,17 @@
-    // ==UserScript==
-    // @name         EODAuto Forms Automation
-    // @namespace    https://github.com/
-    // @version      2.0
-    // @description  Automatically fills Microsoft Forms from EODAuto
-    // @author       You
+// ==UserScript==
+// @name         EODAuto Forms Automation
+// @namespace    https://github.com/
+// @version      2.0
+// @description  Automatically fills Microsoft Forms from EODAuto and validates setup via a local test page.
+// @author       You
 // @match        *://forms.cloud.microsoft/*
 // @match        *://forms.office.com/*
-    // @grant        none
-    // ==/UserScript==
+// @match        *://*/*EODAuto-Test.html
+// @match        file:///*EODAuto-Test.html
+// @match        *://127.0.0.1:5500/*EODAuto-Test.html
+// @match        *://localhost:5500/*EODAuto-Test.html
+// @grant        none
+// ==/UserScript==
 
 (function () {
 
@@ -38,6 +42,13 @@
         answer9: 'Question 9'
 
     };
+
+    const TEST_PAGE_TITLE = 'EODAuto Test Page';
+    const TEST_PAGE_BODY = 'This is the EODAuto setup validation page.';
+
+    function isTestPage() {
+        return /EODAuto-Test\.html$/i.test(location.pathname) || /EODAuto-Test\.html/i.test(location.href);
+    }
 
     /* ==========================================================
     COMMAND CENTER
@@ -334,12 +345,40 @@ if (!payload) {
 
 }
 
+injectOverlayStyles();
+initializeOverlay();
+
+if (payload.verify) {
+    sendVerificationSignal();
+    setStatus('Verified by automation', '#50fa7b');
+    setProgress(1, 1);
+    logSuccess('Verification handshake complete.');
+    stopTimer();
+    if (isTestPage()) {
+        document.title = `${TEST_PAGE_TITLE} — Verified`;
+    }
+    history.replaceState({}, '', location.pathname);
+    return;
+}
+
+function sendVerificationSignal() {
+    if (!window.opener || typeof window.opener.postMessage !== 'function') {
+        return;
+    }
+
+    window.opener.postMessage({
+        type: 'eodauto-verification',
+        verified: true,
+        version: '2.0',
+        timestamp: Date.now()
+    }, '*');
+
+    logSuccess('Verification signal sent to EODauto.');
+}
+
 /* ==========================================================
    INITIALIZE COMMAND CENTER
 ========================================================== */
-
-injectOverlayStyles();
-initializeOverlay();
 
 function injectOverlayStyles() {
 
@@ -1348,4 +1387,5 @@ console.log(
     currentPage++;
 
 }, POLL_INTERVAL);
+
 })();
